@@ -3,15 +3,13 @@ SSHD_CONFIG(5)                File Formats Manual               SSHD_CONFIG(5)
 NAME
      sshd_config M-bM-^@M-^S OpenSSH SSH daemon configuration file
 
-SYNOPSIS
-     /etc/ssh/sshd_config
-
 DESCRIPTION
      sshd(8) reads configuration data from /etc/ssh/sshd_config (or the file
      specified with -f on the command line).  The file contains keyword-
-     argument pairs, one per line.  Lines starting with M-bM-^@M-^X#M-bM-^@M-^Y and empty lines
-     are interpreted as comments.  Arguments may optionally be enclosed in
-     double quotes (") in order to represent arguments containing spaces.
+     argument pairs, one per line.  For each keyword, the first obtained value
+     will be used.  Lines starting with M-bM-^@M-^X#M-bM-^@M-^Y and empty lines are interpreted as
+     comments.  Arguments may optionally be enclosed in double quotes (") in
+     order to represent arguments containing spaces.
 
      The possible keywords and their meanings are as follows (note that
      keywords are case-insensitive and arguments are case-sensitive):
@@ -119,6 +117,11 @@ DESCRIPTION
 
              Note that each authentication method listed should also be
              explicitly enabled in the configuration.
+
+             The available authentication methods are: "gssapi-with-mic",
+             "hostbased", "keyboard-interactive", "none" (used for access to
+             password-less accounts when PermitEmptyPassword is enabled),
+             "password" and "publickey".
 
      AuthorizedKeysCommand
              Specifies a program to be used to look up the user's public keys.
@@ -238,7 +241,9 @@ DESCRIPTION
              Specifies the ciphers allowed.  Multiple ciphers must be comma-
              separated.  If the specified value begins with a M-bM-^@M-^X+M-bM-^@M-^Y character,
              then the specified ciphers will be appended to the default set
-             instead of replacing them.
+             instead of replacing them.  If the specified value begins with a
+             M-bM-^@M-^X-M-bM-^@M-^Y character, then the specified ciphers (including wildcards)
+             will be removed from the default set instead of replacing them.
 
              The supported ciphers are:
 
@@ -251,11 +256,6 @@ DESCRIPTION
                    aes256-ctr
                    aes128-gcm@openssh.com
                    aes256-gcm@openssh.com
-                   arcfour
-                   arcfour128
-                   arcfour256
-                   blowfish-cbc
-                   cast128-cbc
                    chacha20-poly1305@openssh.com
 
              The default is:
@@ -327,6 +327,13 @@ DESCRIPTION
              TCP and StreamLocal.  This option overrides all other forwarding-
              related options and may simplify restricted configurations.
 
+     ExposeAuthInfo
+             Writes a temporary file containing a list of authentication
+             methods and public credentials (e.g. keys) used to authenticate
+             the user.  The location of the file is exposed to the user
+             session through the SSH_USER_AUTH environment variable.  The
+             default is no.
+
      FingerprintHash
              Specifies the hash algorithm used when logging key fingerprints.
              Valid options are: md5 and sha256.  The default is sha256.
@@ -378,7 +385,10 @@ DESCRIPTION
              authentication as a comma-separated pattern list.  Alternately if
              the specified value begins with a M-bM-^@M-^X+M-bM-^@M-^Y character, then the
              specified key types will be appended to the default set instead
-             of replacing them.  The default for this option is:
+             of replacing them.  If the specified value begins with a M-bM-^@M-^X-M-bM-^@M-^Y
+             character, then the specified key types (including wildcards)
+             will be removed from the default set instead of replacing them.
+             The default for this option is:
 
                 ecdsa-sha2-nistp256-cert-v01@openssh.com,
                 ecdsa-sha2-nistp384-cert-v01@openssh.com,
@@ -413,9 +423,8 @@ DESCRIPTION
 
      HostKey
              Specifies a file containing a private host key used by SSH.  The
-             defaults are /etc/ssh/ssh_host_dsa_key,
-             /etc/ssh/ssh_host_ecdsa_key, /etc/ssh/ssh_host_ed25519_key and
-             /etc/ssh/ssh_host_rsa_key.
+             defaults are /etc/ssh/ssh_host_ecdsa_key,
+             /etc/ssh/ssh_host_ed25519_key and /etc/ssh/ssh_host_rsa_key.
 
              Note that sshd(8) will refuse to use a file if it is group/world-
              accessible and that the HostKeyAlgorithms option restricts which
@@ -456,20 +465,21 @@ DESCRIPTION
 
      IgnoreUserKnownHosts
              Specifies whether sshd(8) should ignore the user's
-             ~/.ssh/known_hosts during HostbasedAuthentication.  The default
-             is no.
+             ~/.ssh/known_hosts during HostbasedAuthentication and use only
+             the system-wide known hosts file /etc/ssh/known_hosts.  The
+             default is no.
 
      IPQoS   Specifies the IPv4 type-of-service or DSCP class for the
              connection.  Accepted values are af11, af12, af13, af21, af22,
              af23, af31, af32, af33, af41, af42, af43, cs0, cs1, cs2, cs3,
-             cs4, cs5, cs6, cs7, ef, lowdelay, throughput, reliability, or a
-             numeric value.  This option may take one or two arguments,
-             separated by whitespace.  If one argument is specified, it is
-             used as the packet class unconditionally.  If two values are
-             specified, the first is automatically selected for interactive
-             sessions and the second for non-interactive sessions.  The
-             default is lowdelay for interactive sessions and throughput for
-             non-interactive sessions.
+             cs4, cs5, cs6, cs7, ef, lowdelay, throughput, reliability, a
+             numeric value, or none to use the operating system default.  This
+             option may take one or two arguments, separated by whitespace.
+             If one argument is specified, it is used as the packet class
+             unconditionally.  If two values are specified, the first is
+             automatically selected for interactive sessions and the second
+             for non-interactive sessions.  The default is lowdelay for
+             interactive sessions and throughput for non-interactive sessions.
 
      KbdInteractiveAuthentication
              Specifies whether to allow keyboard-interactive authentication.
@@ -503,12 +513,18 @@ DESCRIPTION
              algorithms must be comma-separated.  Alternately if the specified
              value begins with a M-bM-^@M-^X+M-bM-^@M-^Y character, then the specified methods
              will be appended to the default set instead of replacing them.
-             The supported algorithms are:
+             If the specified value begins with a M-bM-^@M-^X-M-bM-^@M-^Y character, then the
+             specified methods (including wildcards) will be removed from the
+             default set instead of replacing them.  The supported algorithms
+             are:
 
                    curve25519-sha256
                    curve25519-sha256@libssh.org
                    diffie-hellman-group1-sha1
                    diffie-hellman-group14-sha1
+                   diffie-hellman-group14-sha256
+                   diffie-hellman-group16-sha512
+                   diffie-hellman-group18-sha512
                    diffie-hellman-group-exchange-sha1
                    diffie-hellman-group-exchange-sha256
                    ecdh-sha2-nistp256
@@ -520,7 +536,8 @@ DESCRIPTION
                    curve25519-sha256,curve25519-sha256@libssh.org,
                    ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,
                    diffie-hellman-group-exchange-sha256,
-                   diffie-hellman-group14-sha1
+                   diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,
+                   diffie-hellman-group14-sha256,diffie-hellman-group14-sha1
 
              The list of available key exchange algorithms may also be
              obtained using "ssh -Q kex".
@@ -529,13 +546,18 @@ DESCRIPTION
              Specifies the local addresses sshd(8) should listen on.  The
              following forms may be used:
 
-                   ListenAddress host|IPv4_addr|IPv6_addr
-                   ListenAddress host|IPv4_addr:port
-                   ListenAddress [host|IPv6_addr]:port
+                   ListenAddress hostname|address [rdomain domain]
+                   ListenAddress hostname:port [rdomain domain]
+                   ListenAddress IPv4_address:port [rdomain domain]
+                   ListenAddress [hostname|address]:port [rdomain domain]
 
-             If port is not specified, sshd will listen on the address and all
-             Port options specified.  The default is to listen on all local
-             addresses.  Multiple ListenAddress options are permitted.
+             The optional rdomain qualifier requests sshd(8) listen in an
+             explicit routing domain.  If port is not specified, sshd will
+             listen on the address and all Port options specified.  The
+             default is to listen on all local addresses on the current
+             default routing domain.  Multiple ListenAddress options are
+             permitted.  For more information on routing domains, see
+             rdomain(4).
 
      LoginGraceTime
              The server disconnects after this time if the user has not
@@ -555,7 +577,9 @@ DESCRIPTION
              protection.  Multiple algorithms must be comma-separated.  If the
              specified value begins with a M-bM-^@M-^X+M-bM-^@M-^Y character, then the specified
              algorithms will be appended to the default set instead of
-             replacing them.
+             replacing them.  If the specified value begins with a M-bM-^@M-^X-M-bM-^@M-^Y
+             character, then the specified algorithms (including wildcards)
+             will be removed from the default set instead of replacing them.
 
              The algorithms that contain "-etm" calculate the MAC after
              encryption (encrypt-then-mac).  These are considered safer and
@@ -563,7 +587,6 @@ DESCRIPTION
 
                    hmac-md5
                    hmac-md5-96
-                   hmac-ripemd160
                    hmac-sha1
                    hmac-sha1-96
                    hmac-sha2-256
@@ -572,7 +595,6 @@ DESCRIPTION
                    umac-128@openssh.com
                    hmac-md5-etm@openssh.com
                    hmac-md5-96-etm@openssh.com
-                   hmac-ripemd160-etm@openssh.com
                    hmac-sha1-etm@openssh.com
                    hmac-sha1-96-etm@openssh.com
                    hmac-sha2-256-etm@openssh.com
@@ -600,10 +622,13 @@ DESCRIPTION
 
              The arguments to Match are one or more criteria-pattern pairs or
              the single token All which matches all criteria.  The available
-             criteria are User, Group, Host, LocalAddress, LocalPort, and
-             Address.  The match patterns may consist of single entries or
-             comma-separated lists and may use the wildcard and negation
-             operators described in the PATTERNS section of ssh_config(5).
+             criteria are User, Group, Host, LocalAddress, LocalPort, RDomain,
+             and Address (with RDomain representing the rdomain(4) on which
+             the connection was received.)
+
+             The match patterns may consist of single entries or comma-
+             separated lists and may use the wildcard and negation operators
+             described in the PATTERNS section of ssh_config(5).
 
              The patterns in an Address criteria may additionally contain
              addresses to match in CIDR address/masklen format, such as
@@ -624,11 +649,11 @@ DESCRIPTION
              ClientAliveInterval, DenyGroups, DenyUsers, ForceCommand,
              GatewayPorts, GSSAPIAuthentication, HostbasedAcceptedKeyTypes,
              HostbasedAuthentication, HostbasedUsesNameFromPacketOnly, IPQoS,
-             KbdInteractiveAuthentication, KerberosAuthentication,
+             KbdInteractiveAuthentication, KerberosAuthentication, LogLevel,
              MaxAuthTries, MaxSessions, PasswordAuthentication,
              PermitEmptyPasswords, PermitOpen, PermitRootLogin, PermitTTY,
              PermitTunnel, PermitUserRC, PubkeyAcceptedKeyTypes,
-             PubkeyAuthentication, RekeyLimit, RevokedKeys,
+             PubkeyAuthentication, RekeyLimit, RevokedKeys, RDomain,
              StreamLocalBindMask, StreamLocalBindUnlink, TrustedUserCAKeys,
              X11DisplayOffset, X11Forwarding and X11UseLocalHost.
 
@@ -688,12 +713,12 @@ DESCRIPTION
 
      PermitRootLogin
              Specifies whether root can log in using ssh(1).  The argument
-             must be yes, prohibit-password, without-password,
-             forced-commands-only, or no.  The default is prohibit-password.
+             must be yes, prohibit-password, forced-commands-only, or no.  The
+             default is prohibit-password.
 
-             If this option is set to prohibit-password or without-password,
-             password and keyboard-interactive authentication are disabled for
-             root.
+             If this option is set to prohibit-password (or its deprecated
+             alias, without-password), password and keyboard-interactive
+             authentication are disabled for root.
 
              If this option is set to forced-commands-only, root login with
              public key authentication will be allowed, but only if the
@@ -751,7 +776,10 @@ DESCRIPTION
              authentication as a comma-separated pattern list.  Alternately if
              the specified value begins with a M-bM-^@M-^X+M-bM-^@M-^Y character, then the
              specified key types will be appended to the default set instead
-             of replacing them.  The default for this option is:
+             of replacing them.  If the specified value begins with a M-bM-^@M-^X-M-bM-^@M-^Y
+             character, then the specified key types (including wildcards)
+             will be removed from the default set instead of replacing them.
+             The default for this option is:
 
                 ecdsa-sha2-nistp256-cert-v01@openssh.com,
                 ecdsa-sha2-nistp384-cert-v01@openssh.com,
@@ -791,6 +819,13 @@ DESCRIPTION
              or as an OpenSSH Key Revocation List (KRL) as generated by
              ssh-keygen(1).  For more information on KRLs, see the KEY
              REVOCATION LISTS section in ssh-keygen(1).
+
+     RDomain
+             Specifies an explicit routing domain that is applied after
+             authentication has completed.  The user session, as well and any
+             forwarded or listening IP sockets, will be bound to this
+             rdomain(4).  If the routing domain is set to %D, then the domain
+             in which the incoming connection was received will be applied.
 
      StreamLocalBindMask
              Sets the octal file creation mode mask (umask) used when creating
@@ -891,18 +926,6 @@ DESCRIPTION
              If UsePAM is enabled, you will not be able to run sshd(8) as a
              non-root user.  The default is no.
 
-     UsePrivilegeSeparation
-             Specifies whether sshd(8) separates privileges by creating an
-             unprivileged child process to deal with incoming network traffic.
-             After successful authentication, another process will be created
-             that has the privilege of the authenticated user.  The goal of
-             privilege separation is to prevent privilege escalation by
-             containing any corruption within the unprivileged processes.  The
-             argument must be yes, no, or sandbox.  If UsePrivilegeSeparation
-             is set to sandbox then the pre-authentication unprivileged
-             process is subject to additional restrictions.  The default is
-             sandbox.
-
      VersionAddendum
              Optionally specifies additional text to append to the SSH
              protocol banner sent by the server upon connection.  The default
@@ -977,6 +1000,8 @@ TOKENS
      runtime:
 
            %%    A literal M-bM-^@M-^X%M-bM-^@M-^Y.
+           %D    The routing domain in which the incoming connection was
+                 received.
            %F    The fingerprint of the CA key.
            %f    The fingerprint of the key or certificate.
            %h    The home directory of the user.
@@ -988,16 +1013,18 @@ TOKENS
            %t    The key or certificate type.
            %u    The username.
 
-     AuthorizedKeysCommand accepts the tokens %%, %f, %h, %t, and %u.
+     AuthorizedKeysCommand accepts the tokens %%, %f, %h, %k, %t, and %u.
 
      AuthorizedKeysFile accepts the tokens %%, %h, and %u.
 
-     AuthorizedPrincipalsCommand accepts the tokens %%, %F, %f, %K, %k, %h,
-     %i, %s, %T, %t, and %u.
+     AuthorizedPrincipalsCommand accepts the tokens %%, %F, %f, %h, %i, %K,
+     %k, %s, %T, %t, and %u.
 
      AuthorizedPrincipalsFile accepts the tokens %%, %h, and %u.
 
      ChrootDirectory accepts the tokens %%, %h, and %u.
+
+     RoutingDomain accepts the token %D.
 
 FILES
      /etc/ssh/sshd_config
@@ -1016,4 +1043,4 @@ AUTHORS
      versions 1.5 and 2.0.  Niels Provos and Markus Friedl contributed support
      for privilege separation.
 
-OpenBSD 6.0                    November 30, 2016                   OpenBSD 6.0
+OpenBSD 6.2                    February 16, 2018                   OpenBSD 6.2
