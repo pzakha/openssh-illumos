@@ -221,6 +221,7 @@ typedef struct {
 
 	int	fingerprint_hash;
 	int	expose_userauth_info;
+	char   *pubkey_plugin;
 }       ServerOptions;
 
 /* Information about the incoming connection as used by Match */
