@@ -160,7 +160,7 @@ initialize_server_options(ServerOptions *options)
 	options->client_alive_interval = -1;
 	options->client_alive_count_max = -1;
 	options->num_authkeys_files = 0;
-	options->num_accept_env = 0;
+	options->num_accept_env = -1;
 	options->permit_tun = -1;
 	options->permitted_opens = NULL;
 	options->adm_forced_command = NULL;
@@ -448,6 +448,25 @@ fill_default_server_options(ServerOptions *options)
 		options->max_sessions = DEFAULT_SESSIONS_MAX;
 	if (options->use_dns == -1)
 		options->use_dns = 0;
+	if (options->num_accept_env == -1) {
+		options->num_accept_env = 0;
+		array_append("[default]", 0, "AcceptEnv", &options->accept_env,
+		    &options->num_accept_env, "LANG");
+		array_append("[default]", 0, "AcceptEnv", &options->accept_env,
+		    &options->num_accept_env, "LC_ALL");
+		array_append("[default]", 0, "AcceptEnv", &options->accept_env,
+		    &options->num_accept_env, "LC_CTYPE");
+		array_append("[default]", 0, "AcceptEnv", &options->accept_env,
+		    &options->num_accept_env, "LC_COLLATE");
+		array_append("[default]", 0, "AcceptEnv", &options->accept_env,
+		    &options->num_accept_env, "LC_TIME");
+		array_append("[default]", 0, "AcceptEnv", &options->accept_env,
+		    &options->num_accept_env, "LC_NUMERIC");
+		array_append("[default]", 0, "AcceptEnv", &options->accept_env,
+		    &options->num_accept_env, "LC_MONETARY");
+		array_append("[default]", 0, "AcceptEnv", &options->accept_env,
+		    &options->num_accept_env, "LC_MESSAGES");
+	}
 	if (options->client_alive_interval == -1)
 		options->client_alive_interval = 0;
 	if (options->client_alive_count_max == -1)
@@ -1932,7 +1951,11 @@ process_server_config_line(ServerOptions *options, char *line,
 			if (strchr(arg, '=') != NULL)
 				fatal("%s line %d: Invalid environment name.",
 				    filename, linenum);
+			if (options->num_accept_env == -1)
+				options->num_accept_env = 0;
 			if (!*activep)
+				continue;
+			if (strcmp(arg, "none") == 0)
 				continue;
 			array_append(filename, linenum, "AcceptEnv",
 			    &options->accept_env, &options->num_accept_env,
@@ -2411,7 +2434,7 @@ copy_set_server_options(ServerOptions *dst, ServerOptions *src, int preauth)
 } while(0)
 #define M_CP_STRARRAYOPT(s, num_s) do {\
 	u_int i; \
-	if (src->num_s != 0) { \
+	if (src->num_s != 0 && src->num_s != -1) { \
 		for (i = 0; i < dst->num_s; i++) \
 			free(dst->s[i]); \
 		free(dst->s); \
