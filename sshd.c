@@ -2117,7 +2117,9 @@ main(int ac, char **av)
 	}
 
 #ifdef SSH_AUDIT_EVENTS
+#ifndef	USE_SOLARIS_AUDIT
 	audit_event(SSH_AUTH_SUCCESS);
+#endif	/* !USE_SOLARIS_AUDIT */
 #endif
 
 #ifdef GSSAPI
@@ -2147,6 +2149,10 @@ main(int ac, char **av)
 		do_pam_session(ssh);
 	}
 #endif
+#ifdef	USE_SOLARIS_AUDIT
+	/* Audit should take place after all successful pam */
+	audit_event(SSH_AUTH_SUCCESS);
+#endif	/* USE_SOLARIS_AUDIT */
 
 	/*
 	 * In privilege separation, we fork another child and prepare
